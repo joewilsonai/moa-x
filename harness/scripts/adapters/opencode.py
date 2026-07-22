@@ -199,6 +199,45 @@ def _write_log_file(log_file: Optional[Path], stdout: str, stderr: str) -> None:
         print(f"[opencode adapter] failed to write log {log_file}: {e}", file=_sys.stderr)
 
 
+# The positional instruction opencode receives on argv; the real task lives in
+# the -f prompt file. A module constant so the command builder and its test
+# share one source of truth.
+_OPENCODE_RUN_MESSAGE = (
+    "Read the attached file in full and follow its instructions exactly. "
+    "Output only the requested JSON object."
+)
+
+
+def _build_opencode_cmd(
+    bin_name: str, model: str, repo_path: Path, prompt_file: Path
+) -> list[str]:
+    """Assemble the `opencode run` argv. Arg order is load-bearing:
+
+    - `-f/--file` is a greedy yargs ARRAY option, so the positional message must
+      come BEFORE it (else -f swallows the message as a second "file" and errors
+      "File not found"). -f is kept LAST, with the prompt file immediately after
+      it and nothing following.
+    - `--print-logs` routes progress/logs to stderr; without it current opencode
+      (>=1.18) buffers on a TTY-style renderer and hangs forever under piped
+      stdout/stderr (headless subprocess), producing an empty-output timeout.
+      `--log-level ERROR` keeps that stderr quiet so failure diagnosis stays
+      accurate (fatal quota/auth errors still reach stderr at ERROR level).
+    - `--dangerously-skip-permissions` auto-approves anything not denied by the
+      OPENCODE_CONFIG policy (which denies edit + bash), so reads/webfetch work
+      but writes can't.
+    """
+    return [
+        bin_name,
+        "run",
+        _OPENCODE_RUN_MESSAGE,
+        "-m", model,
+        "--dir", str(repo_path),
+        "--dangerously-skip-permissions",
+        "--print-logs", "--log-level", "ERROR",
+        "-f", str(prompt_file),
+    ]
+
+
 def run(
     *,
     prompt: str,
@@ -258,29 +297,10 @@ def run(
             prompt_file = Path(tmpdir) / "opencode-prompt.md"
         prompt_file.write_text(full_prompt, encoding="utf-8")
 
-        # Arg order matters: `-f/--file` is a greedy yargs ARRAY option, so the
-        # positional message must come BEFORE it (or -f would swallow the
-        # message string as a second "file" and error "File not found"). Keep
-        # -f last with nothing after it. `--dangerously-skip-permissions`
-        # auto-approves any permission not explicitly denied by OPENCODE_CONFIG
-        # (which denies edit + bash), so reads/webfetch work but writes can't.
-        cmd = [
-            _opencode_bin(),
-            "run",
-            "Read the attached file in full and follow its instructions exactly. "
-            "Output only the requested JSON object.",
-            "-m", model,
-            "--dir", str(repo_path),
-            "--dangerously-skip-permissions",
-            # --print-logs routes progress/logs to stderr. Without it, current
-            # opencode (>=1.18) buffers on a TTY-style renderer and hangs forever
-            # when stdout/stderr are pipes (headless subprocess), producing an
-            # empty-output timeout. Logs on stderr don't affect stdout payload
-            # extraction. --log-level ERROR keeps stderr quiet so failure
-            # diagnosis stays accurate.
-            "--print-logs", "--log-level", "ERROR",
-            "-f", str(prompt_file),
-        ]
+        # Arg order is load-bearing (-f is greedy; --print-logs prevents a
+        # headless hang) — see _build_opencode_cmd, which owns the invariant and
+        # is guarded by test_opencode_cmd_arg_order.
+        cmd = _build_opencode_cmd(_opencode_bin(), model, repo_path, prompt_file)
 
         try:
             proc = subprocess.Popen(
@@ -379,13 +399,21 @@ def _diagnose_failure(stdout: str, stderr: str) -> tuple[str, bool]:
     Quota and auth failures are non-transient (a retry won't help).
     """
     stderr_lower = (stderr or "").lower()
+    # Bounded, phrase-level substrings so a real quota/auth failure is classified
+    # non-transient across providers' varied wording, WITHOUT false-matching
+    # (misclassifying a transient as non-transient suppresses a valid retry).
+    # NB: capacity words like "overloaded" are intentionally NOT here — those are
+    # transient and should fall through to the empty-stdout retry path below.
     quota_hit = any(
         p in stderr_lower
-        for p in ("rate limit", "quota", "429", "exceeded", "insufficient balance")
+        for p in ("rate limit", "rate-limit", "too many requests", "quota", "429",
+                  "exceeded", "insufficient balance", "insufficient_quota",
+                  "payment required")
     )
     auth_hit = any(
         p in stderr_lower
-        for p in ("unauthorized", "401", "403", "invalid api key", "not authenticated", "no credentials")
+        for p in ("unauthorized", "401", "403", "invalid api key", "invalid_api_key",
+                  "not authenticated", "authentication failed", "no credentials")
     )
     routing_hit = any(
         p in stderr_lower

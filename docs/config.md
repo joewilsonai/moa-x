@@ -60,18 +60,20 @@ matching `MOA_<NAME>_MODEL` environment variables.
 
 ### User-defined providers
 
-Add your own under `providers:` in `harness/config.yaml`:
+Add your own under `providers:` in `harness/config.yaml`. Pick a name that
+isn't already a built-in (`cursor-grok` ships built-in, so use a distinct
+name like `c-grok`):
 
 ```yaml
 providers:
-  cursor-grok: {harness: cursor, model: cursor-grok-4.5-high}
+  c-grok: {harness: cursor, model: cursor-grok-4.5-high}
 ```
 
 Then reference the name in `layers:`:
 
 ```yaml
 layers:
-  proposers: [codex, glm, sonnet, cursor-grok]
+  proposers: [codex, glm, sonnet, c-grok]
   refiners:  [codex-reviewer, qwen]
 ```
 
@@ -80,8 +82,8 @@ using the name uppercased with `-` → `_`:
 
 | Pattern | Example | What it does |
 |---|---|---|
-| `MOA_<NAME>_MODEL` | `MOA_CURSOR_GROK_MODEL=cursor-grok-4.5-medium` | Override model for that provider |
-| `MOA_<NAME>_TIMEOUT` | `MOA_CURSOR_GROK_TIMEOUT=900` | Wall-clock cap in seconds |
+| `MOA_<NAME>_MODEL` | `MOA_C_GROK_MODEL=cursor-grok-4.5-medium` | Override model for that provider |
+| `MOA_<NAME>_TIMEOUT` | `MOA_C_GROK_TIMEOUT=900` | Wall-clock cap in seconds |
 
 ### Env-var shorthand: `MOA_PROVIDER_<NAME>`
 
@@ -129,9 +131,9 @@ Then edit. Example:
 
 ```yaml
 providers:
-  cursor-grok: {harness: cursor, model: cursor-grok-4.5-high}
+  c-grok: {harness: cursor, model: cursor-grok-4.5-high}
 layers:
-  proposers: [codex, glm, sonnet, cursor-grok]
+  proposers: [codex, glm, sonnet, c-grok]
   refiners:  [codex-reviewer, qwen]
   aggregator: opus
 ```
@@ -200,10 +202,11 @@ and [OpenCode setup](https://docs.qwencloud.com/developer-guides/clients-and-dev
 
 ### 5-lane mix (defaults + cursor-grok)
 
+`cursor-grok` ships built-in, so no `providers:` block is needed — just name it
+in a layer:
+
 ```yaml
 # harness/config.yaml
-providers:
-  cursor-grok: {harness: cursor, model: cursor-grok-4.5-high}
 layers:
   proposers: [codex, glm, sonnet, cursor-grok]
   refiners:  [codex-reviewer, qwen]

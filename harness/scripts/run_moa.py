@@ -2485,7 +2485,8 @@ def main() -> int:
         if same_lab_refiners:
             print(
                 f"[orchestrator] WARN: refiners {same_lab_refiners} share the aggregator's "
-                "harness (claude); cross-lab refinement is recommended (see CLAUDE.md)",
+                f"harness ({final_aggregator.harness}); cross-lab refinement is recommended "
+                "(see CLAUDE.md)",
                 flush=True,
             )
         print(

@@ -1378,9 +1378,57 @@ def test_config_resolve_builtin_grok_uses_opencode() -> bool:
 
 
 def test_opencode_preflight_recognizes_xai_key() -> bool:
-    print("\n[N] opencode preflight registers XAI_API_KEY as valid auth (grok recipe)")
+    print("\n[N] opencode preflight: XAI_API_KEY alone makes check_available() pass (grok recipe)")
     from adapters import opencode as oc
-    return _ok("XAI_API_KEY" in oc._PROVIDER_KEY_ENVS, f"_PROVIDER_KEY_ENVS={oc._PROVIDER_KEY_ENVS}")
+    import os as _os
+    # Behavioral test of the provider-key branch: with XAI as the ONLY credential,
+    # check_available() must return True. Stub the binary presence + `opencode
+    # auth list` so we exercise the real detection logic, not a live install.
+    class _FakeProc:
+        returncode = 0
+        stdout = "0 credentials"   # empty auth list -> forces the env-key branch
+        stderr = ""
+    orig_which = oc.shutil.which
+    orig_run = oc.subprocess.run
+    prior = {k: _os.environ.get(k) for k in oc._PROVIDER_KEY_ENVS}
+    try:
+        oc.shutil.which = lambda _n: "/fake/opencode"
+        oc.subprocess.run = lambda *a, **k: _FakeProc()
+        for k in oc._PROVIDER_KEY_ENVS:            # clear every provider key
+            _os.environ.pop(k, None)
+        _os.environ["XAI_API_KEY"] = "xai-test-only"
+        ok_xai, msg_xai = oc.check_available()
+        _os.environ.pop("XAI_API_KEY")             # now NO provider key at all
+        ok_none, _ = oc.check_available()
+        ok = (ok_xai is True and "XAI_API_KEY" in msg_xai and ok_none is False)
+        return _ok(ok, f"xai-only=({ok_xai},{msg_xai!r})  none={ok_none}")
+    finally:
+        oc.shutil.which = orig_which
+        oc.subprocess.run = orig_run
+        for k, v in prior.items():
+            if v is None:
+                _os.environ.pop(k, None)
+            else:
+                _os.environ[k] = v
+
+
+def test_opencode_cmd_arg_order() -> bool:
+    print("\n[N] opencode _build_opencode_cmd: arg-order invariant (-f last, greedy) + hang-fix flags")
+    from adapters import opencode as oc
+    from pathlib import Path as _P
+    pf = "/repo/.moa/p.prompt.md"
+    cmd = oc._build_opencode_cmd("opencode", "xai/grok-4.5", _P("/repo"), _P(pf))
+    has_logs = "--print-logs" in cmd
+    has_level = ("--log-level" in cmd and cmd[cmd.index("--log-level") + 1] == "ERROR")
+    model_ok = ("-m" in cmd and cmd[cmd.index("-m") + 1] == "xai/grok-4.5")
+    # -f must be the FINAL option with the prompt file the last token...
+    f_idx = cmd.index("-f")
+    f_last = (f_idx == len(cmd) - 2 and cmd[-1] == pf)
+    # ...and the positional message must appear BEFORE -f (else greedy -f eats it).
+    msg_before_f = (oc._OPENCODE_RUN_MESSAGE in cmd
+                    and cmd.index(oc._OPENCODE_RUN_MESSAGE) < f_idx)
+    ok = has_logs and has_level and model_ok and f_last and msg_before_f
+    return _ok(ok, f"cmd={cmd}")
 
 
 def test_opencode_grok_recipe_extracts_valid_grok_payload() -> bool:
@@ -2134,6 +2182,7 @@ def main() -> int:
         test_config_resolve_builtin_composer_uses_cursor,
         test_config_resolve_builtin_grok_uses_opencode,
         test_opencode_preflight_recognizes_xai_key,
+        test_opencode_cmd_arg_order,
         test_opencode_grok_recipe_extracts_valid_grok_payload,
         test_config_resolve_builtin_cursor_grok_uses_cursor,
         test_cursor_grok_recipe_extracts_valid_payload,
