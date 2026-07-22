@@ -79,7 +79,7 @@ layers:
 # Example: everything through the Cursor CLI (one binary, many labs)
 #
 # providers:
-#   c-gpt:      {harness: cursor, model: gpt-5.5}
+#   c-gpt:      {harness: cursor, model: gpt-5.5-medium}
 #   c-composer: {harness: cursor, model: composer-2.5}
 #   c-grok:     {harness: cursor, model: cursor-grok-4.5-high}
 # layers:

@@ -30,8 +30,8 @@ models do.
 `glm` (GLM-5.2 via the `opencode` CLI), and Anthropic `claude` (in Sonnet
 mode). Each produces an independent plan. Every proposer reads the repo
 (codex with a filesystem-enforced read-only sandbox; opencode with a
-permission-deny policy plus the prompt rule; sonnet with read-only
-enforced by prompt) and does web research. Different labs tend to mean
+permission-deny policy plus the prompt rule; sonnet with a tool allowlist
+that excludes Write/Edit/Bash, plus the prompt rule) and does web research. Different labs tend to mean
 different training data, different tool-use behavior, and different blind
 spots.
 
@@ -126,7 +126,7 @@ is which CLI gets invoked (`codex`, `claude`, `opencode`, `cursor`); the
 `model` is what that harness asks for (e.g. `gpt-5.6-terra`, `opencode-go/glm-5.2`,
 `cursor-grok-4.5-high`); the `name` is a user-facing label that becomes the
 `agent_id` in payloads. The codebase ships built-in names `codex`,
-`codex-reviewer`, `sonnet`, `opus`, `glm`, `kimi`, `qwen`, `composer`, `grok`, `cursor-grok`; users add their own under
+`codex-reviewer`, `codex-aggregator`, `sonnet`, `opus`, `glm`, `kimi`, `qwen`, `composer`, `grok`, `cursor-grok`; users add their own under
 `providers:` in `harness/config.yaml` or via the
 `MOA_PROVIDER_<NAME>=<harness>:<model>` env shorthand.
 

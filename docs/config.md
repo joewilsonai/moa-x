@@ -200,7 +200,7 @@ Token Plan keys and pay-as-you-go keys/endpoints are not interchangeable.
 See the official [Qwen Token Plan quick start](https://docs.qwencloud.com/token-plan/team/token-plan-team-quickstart)
 and [OpenCode setup](https://docs.qwencloud.com/developer-guides/clients-and-developer-tools/opencode).
 
-### 5-lane mix (defaults + cursor-grok)
+### 4-proposer mix (defaults + cursor-grok)
 
 `cursor-grok` ships built-in, so no `providers:` block is needed — just name it
 in a layer:
@@ -262,7 +262,7 @@ The `gemini` provider and its adapter were removed in v0.3.0. There
 is no longer a `gemini` harness, no built-in `gemini` provider, and
 no `MOA_GEMINI_*` knobs or `--gemini-model` / `--gemini-timeout`
 flags. The default roster's cross-lab diversity now comes from GLM
-(Zhipu) and Kimi (Moonshot) via the `opencode` harness.
+(Zhipu, proposer) and Qwen (Alibaba, refiner) via the `opencode` harness.
 
 If you still want a Gemini model in the ensemble, route it through
 the `cursor` harness as a user provider:

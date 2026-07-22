@@ -182,8 +182,9 @@ Notes:
   in: `cursor-grok-4.5-high` / `-medium` / `-low` (append `-fast` for the
   faster variant). The bare `grok-4-20` id from older catalogs is gone —
   always confirm with `cursor-agent --list-models`.
-- moa-x does not validate model ids — Cursor errors are surfaced
-  verbatim if you typo.
+- The adapter does not validate model ids at runtime — Cursor errors are
+  surfaced verbatim if you typo. (Preflight *does* check them against
+  `cursor-agent --list-models`; see the preflight section below.)
 
 ## Per-model lab routing
 
@@ -196,7 +197,7 @@ identifiers by provider. Useful summary as of 2026-04:
 | OpenAI    | `gpt-*`                                                    |
 | Anthropic | `claude-*`                                                 |
 | Google    | `gemini-*`                                                 |
-| xAI       | `grok-*`                                                   |
+| xAI       | `cursor-grok-*`                                            |
 | Moonshot  | `kimi-*`                                                   |
 | Zhipu     | `glm-*`                                                    |
 | Cursor    | `composer-*` (Cursor's own foundation models)              |

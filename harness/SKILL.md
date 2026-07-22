@@ -68,12 +68,12 @@ Layer 0 — Spec triage                      (parent Claude Code, in-place)
                    ↓
 Layer 1 — Proposers                        (3 parallel, headless, yolo/read-only)
    │
-   ├─ codex exec --sandbox read-only -a never -m gpt-5.6-terra -c model_reasoning_effort=high
+   ├─ codex --ask-for-approval never exec --sandbox read-only -m gpt-5.6-terra -c model_reasoning_effort=high
    │     │   (filesystem-enforced read-only + --output-schema enforced, web research required)
    │     └→ .moa/<session>/layer1/codex-proposer.json
    │
    ├─ opencode run <message> -m opencode-go/glm-5.2 --dir ...
-   │     │   --dangerously-skip-permissions -f ... (GLM proposer)
+   │     │   --dangerously-skip-permissions --print-logs --log-level ERROR -f ... (GLM proposer)
    │     │   (edit/bash denied by OPENCODE_CONFIG; read/web allowed)
    │     └→ .moa/<session>/layer1/glm-proposer.json
    │
